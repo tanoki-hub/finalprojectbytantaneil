@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ICCT Student Portal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- LOGIN/REGISTER SECTION -->
+<div id="authSection" class="login-body">
+    <div class="login-container">
+        <img src="logo.png" class="logo-large">
+        <h2>ICCT Student Portal</h2>
+
+        <!-- LOGIN SECTION -->
+        <div id="loginSection">
+            <input type="text" id="loginId" placeholder="Student ID">
+            <input type="password" id="loginPassword" placeholder="Password">
+            <button onclick="login()">Login</button>
+            <p class="link" onclick="showSignup()">No account? Sign up here</p>
+        </div>
+
+        <!-- SIGNUP SECTION -->
+        <div id="signupSection" style="display:none;">
+            <input type="text" id="signupId" placeholder="Student ID">
+            <input type="text" id="signupName" placeholder="Full Name">
+            <input type="text" id="signupCourse" placeholder="Course">
+            <input type="number" id="signupYear" placeholder="Year Level">
+            <input type="number" id="signupAge" placeholder="Age">
+            <input type="password" id="signupPassword" placeholder="Create Password">
+            <button onclick="signup()">Create Account</button>
+            <p class="link" onclick="showLogin()">Already have account? Login</p>
+        </div>
+
+        <p id="message"></p>
+    </div>
+</div>
+
+<!-- DASHBOARD SECTION (Hidden by default) -->
+<div id="dashboardSection" class="hidden">
+    <div class="header">
+        <h1>Student Information Management System</h1>
+
+        <div class="top-buttons">
+            <button class="delete-account-btn" onclick="openDeleteModal()">
+                Delete My Account
+            </button>
+
+            <button class="logout-btn" onclick="logout()">
+                Logout
+            </button>
+        </div>
+
+        <img src="logo.png" class="logo">
+    </div>
+
+    <h2>Student List</h2>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search by Student ID or Name">
+        <button onclick="searchStudent()">Search</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Course</th>
+                <th>Year</th>
+                <th>Age</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="studentTable"></tbody>
+    </table>
+</div>
+
+<!-- EDIT MODAL -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h3>Edit My Information</h3>
+        <input type="text" id="editId" placeholder="Student ID" readonly>
+        <input type="text" id="editName" placeholder="Full Name">
+        <input type="text" id="editCourse" placeholder="Course">
+        <input type="number" id="editYear" placeholder="Year Level">
+        <input type="number" id="editAge" placeholder="Age">
+        <div class="modal-buttons">
+            <button onclick="saveEdit()">Save</button>
+            <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE ACCOUNT MODAL -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <h3>Delete Account</h3>
+        <p>Are you sure you want to delete your account?</p>
+        <div class="modal-buttons">
+            <button onclick="confirmDelete()">Yes, Delete</button>
+            <button class="cancel-btn" onclick="closeDeleteModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentUserId = null;
+
+    // Check login status on page load
+    window.onload = function() {
+        if(localStorage.getItem("loggedIn") === "true") {
+            currentUserId = localStorage.getItem("currentUserId");
+            showDashboard();
+        } else {
+            showAuth();
+        }
+    };
+
+    // Auth Section Functions
+    function showSignup() {
+        document.getElementById("loginSection").style.display = "none";
+        document.getElementById("signupSection").style.display = "block";
+        document.getElementById("message").innerText = "";
+    }
+
+    function showLogin() {
+        document.getElementById("signupSection").style.display = "none";
+        document.getElementById("loginSection").style.display = "block";
+        document.getElementById("message").innerText = "";
+    }
+
+    function signup() {
+        let id = document.getElementById("signupId").value.trim();
+        let name = document.getElementById("signupName").value.trim();
+        let course = document.getElementById("signupCourse").value.trim();
+        let year = document.getElementById("signupYear").value.trim();
+        let age = document.getElementById("signupAge").value.trim();
+        let password = document.getElementById("signupPassword").value.trim();
+
+        if(id === "" || name === "" || course === "" || year === "" || age === "" || password === "") {
+            document.getElementById("message").innerText = "Fill in all fields!";
+            document.getElementById("message").style.color = "#dc3545";
+            return;
+        }
+
+        // Check if ID already exists
+        let students = JSON.parse(localStorage.getItem("students")) || [];
+        if(students.find(s => s.id === id)) {
+            document.getElementById("message").innerText = "Student ID already exists!";
+            document.getElementById("message").style.color = "#dc3545";
+            return;
+        }
+
+        let student = { id, name, course, year, age, password };
+        localStorage.setItem("studentAccount", JSON.stringify(student));
+
+        students.push({ id, name, course, year, age });
+        localStorage.setItem("students", JSON.stringify(students));
+
+        document.getElementById("message").style.color = "green";
+        document.getElementById("message").innerText = "Account created successfully!";
+        setTimeout(showLogin, 1500);
+    }
+
+    function login() {
+        let loginId = document.getElementById("loginId").value.trim();
+        let loginPassword = document.getElementById("loginPassword").value.trim();
+        let stored = JSON.parse(localStorage.getItem("studentAccount"));
+
+        if(stored && loginId === stored.id && loginPassword === stored.password) {
+            localStorage.setItem("loggedIn", "true");
+            localStorage.setItem("currentUserId", loginId);
+            currentUserId = loginId;
+            showDashboard();
+        } else {
+            document.getElementById("message").style.color = "#dc3545";
+            document.getElementById("message").innerText = "Invalid Student ID or Password!";
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem("loggedIn");
+        localStorage.removeItem("currentUserId");
+        currentUserId = null;
+        showAuth();
+    }
+
+    // View Management
+    function showAuth() {
+        document.getElementById("authSection").classList.remove("hidden");
+        document.getElementById("dashboardSection").classList.add("hidden");
+        document.body.className = "";
+        document.getElementById("loginId").value = "";
+        document.getElementById("loginPassword").value = "";
+        document.getElementById("message").innerText = "";
+    }
+
+    function showDashboard() {
+        document.getElementById("authSection").classList.add("hidden");
+        document.getElementById("dashboardSection").classList.remove("hidden");
+        document.body.className = "dashboard-body";
+        renderTable();
+    }
+
+    // Student Management Functions - SHOW ALL, EDIT ONLY OWN
+    function renderTable() {
+        let students = JSON.parse(localStorage.getItem("students")) || [];
+        let tbody = document.getElementById("studentTable");
+        tbody.innerHTML = "";
+
+        students.forEach((student) => {
+            let row = tbody.insertRow();
+            let isCurrentUser = student.id === currentUserId;
+            
+            // Only show Edit/Delete buttons for current user
+            let actions = isCurrentUser 
+                ? `<button class="action-btn edit-btn" onclick="openEditModal()">Edit</button>
+                   <button class="action-btn delete-btn" onclick="openDeleteModal()">Delete</button>`
+                : `<span style="color: #999; font-size: 12px;">View Only</span>`;
+            
+            row.innerHTML = `
+                <td>${student.id}</td>
+                <td>${student.name}</td>
+                <td>${student.course}</td>
+                <td>${student.year}</td>
+                <td>${student.age}</td>
+                <td>${actions}</td>
+            `;
+        });
+    }
+
+    function searchStudent() {
+        let query = document.getElementById("searchInput").value.toLowerCase();
+        let students = JSON.parse(localStorage.getItem("students")) || [];
+        let tbody = document.getElementById("studentTable");
+        tbody.innerHTML = "";
+
+        students.forEach((student) => {
+            if(student.id.toLowerCase().includes(query) || student.name.toLowerCase().includes(query)) {
+                let row = tbody.insertRow();
+                let isCurrentUser = student.id === currentUserId;
+                
+                let actions = isCurrentUser 
+                    ? `<button class="action-btn edit-btn" onclick="openEditModal()">Edit</button>
+                       <button class="action-btn delete-btn" onclick="openDeleteModal()">Delete</button>`
+                    : `<span style="color: #999; font-size: 12px;">View Only</span>`;
+                
+                row.innerHTML = `
+                    <td>${student.id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.course}</td>
+                    <td>${student.year}</td>
+                    <td>${student.age}</td>
+                    <td>${actions}</td>
+                `;
+            }
+        });
+    }
+
+    function openEditModal() {
+        let students = JSON.parse(localStorage.getItem("students")) || [];
+        let student = students.find(s => s.id === currentUserId);
+
+        if(student) {
+            document.getElementById("editId").value = student.id;
+            document.getElementById("editName").value = student.name;
+            document.getElementById("editCourse").value = student.course;
+            document.getElementById("editYear").value = student.year;
+            document.getElementById("editAge").value = student.age;
+
+            document.getElementById("editModal").style.display = "flex";
+        }
+    }
+
+    function closeModal() {
+        document.getElementById("editModal").style.display = "none";
+    }
+
+    function saveEdit() {
+        let students = JSON.parse(localStorage.getItem("students")) || [];
+        let account = JSON.parse(localStorage.getItem("studentAccount")) || {};
+        
+        // Find and update only current user's record
+        let studentIndex = students.findIndex(s => s.id === currentUserId);
+        
+        if(studentIndex !== -1) {
+            students[studentIndex] = {
+                id: currentUserId,
+                name: document.getElementById("editName").value,
+                course: document.getElementById("editCourse").value,
+                year: document.getElementById("editYear").value,
+                age: document.getElementById("editAge").value
+            };
+            
+            // Update account info too
+            account.name = document.getElementById("editName").value;
+            account.course = document.getElementById("editCourse").value;
+            account.year = document.getElementById("editYear").value;
+            account.age = document.getElementById("editAge").value;
+            
+            localStorage.setItem("students", JSON.stringify(students));
+            localStorage.setItem("studentAccount", JSON.stringify(account));
+            
+            renderTable();
+            closeModal();
+        }
+    }
+
+    // Delete Account Functions
+    function openDeleteModal() {
+        document.getElementById("deleteModal").style.display = "flex";
+    }
+
+    function closeDeleteModal() {
+        document.getElementById("deleteModal").style.display = "none";
+    }
+
+    function confirmDelete() {
+        // Only delete current user's data
+        let students = JSON.parse(localStorage.getItem("students")) || [];
+        students = students.filter(s => s.id !== currentUserId);
+        
+        localStorage.setItem("students", JSON.stringify(students));
+        localStorage.removeItem("studentAccount");
+        localStorage.removeItem("loggedIn");
+        localStorage.removeItem("currentUserId");
+        currentUserId = null;
+        
+        closeDeleteModal();
+        showAuth();
+        document.getElementById("message").style.color = "green";
+        document.getElementById("message").innerText = "Account deleted successfully";
+    }
+
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        if(event.target.classList.contains("modal")) {
+            event.target.style.display = "none";
+        }
+    }
+</script>
+
+</body>
+</html>
