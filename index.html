@@ -15,7 +15,6 @@
             min-height: 100vh;
         }
 
-        /* LOGIN PAGE */
         .login-body {
             background: linear-gradient(135deg, #1f3c88, #6c757d);
             display: flex;
@@ -79,7 +78,6 @@
             min-height: 20px;
         }
 
-        /* DASHBOARD */
         .dashboard-body {
             padding: 0;
         }
@@ -252,7 +250,6 @@
             font-style: italic;
         }
 
-        /* MODAL */
         .modal {
             display: none;
             position: fixed;
@@ -295,11 +292,6 @@
             font-size: 14px;
         }
 
-        .modal-content input[readonly] {
-            background: #e9ecef;
-            cursor: not-allowed;
-        }
-
         .modal-buttons {
             margin-top: 20px;
             display: flex;
@@ -322,12 +314,10 @@
             background: #6c757d !important;
         }
 
-        /* UTILITY */
         .hidden {
             display: none !important;
         }
 
-        /* RESPONSIVE */
         @media (max-width: 768px) {
             .header {
                 padding: 80px 20px 20px 20px;
@@ -384,7 +374,6 @@
 </head>
 <body>
 
-<!-- LOGIN/REGISTER SECTION -->
 <div id="authSection" class="login-body">
     <div class="login-container">
         <img src="logo.png" class="logo-large" alt="Logo">
@@ -412,7 +401,6 @@
     </div>
 </div>
 
-<!-- DASHBOARD SECTION -->
 <div id="dashboardSection" class="hidden">
     <div class="header">
         <div class="top-buttons">
@@ -447,11 +435,10 @@
     </div>
 </div>
 
-<!-- EDIT MODAL -->
 <div id="editModal" class="modal">
     <div class="modal-content">
         <h3>Edit My Information</h3>
-        <input type="text" id="editId" placeholder="Student ID" readonly>
+        <input type="text" id="editId" placeholder="Student ID">
         <input type="text" id="editName" placeholder="Full Name">
         <input type="text" id="editCourse" placeholder="Course">
         <input type="number" id="editYear" placeholder="Year Level">
@@ -463,7 +450,6 @@
     </div>
 </div>
 
-<!-- DELETE ACCOUNT MODAL -->
 <div id="deleteModal" class="modal">
     <div class="modal-content">
         <h3>Delete Account</h3>
@@ -643,17 +629,35 @@
     function saveEdit() {
         let students = JSON.parse(localStorage.getItem("students")) || [];
         let account = JSON.parse(localStorage.getItem("studentAccount")) || {};
-        let studentIndex = students.findIndex(s => s.id === currentUserId);
+        
+        let newId = document.getElementById("editId").value.trim();
+        let oldId = currentUserId;
+        
+        if(newId === "") {
+            alert("Student ID cannot be empty!");
+            return;
+        }
+        
+        if(newId !== oldId) {
+            let existingStudent = students.find(s => s.id === newId);
+            if(existingStudent) {
+                alert("Student ID already exists! Please choose a different one.");
+                return;
+            }
+        }
+        
+        let studentIndex = students.findIndex(s => s.id === oldId);
         
         if(studentIndex !== -1) {
             students[studentIndex] = {
-                id: currentUserId,
+                id: newId,
                 name: document.getElementById("editName").value,
                 course: document.getElementById("editCourse").value,
                 year: document.getElementById("editYear").value,
                 age: document.getElementById("editAge").value
             };
             
+            account.id = newId;
             account.name = document.getElementById("editName").value;
             account.course = document.getElementById("editCourse").value;
             account.year = document.getElementById("editYear").value;
@@ -661,6 +665,10 @@
             
             localStorage.setItem("students", JSON.stringify(students));
             localStorage.setItem("studentAccount", JSON.stringify(account));
+            
+            currentUserId = newId;
+            localStorage.setItem("currentUserId", newId);
+            
             renderTable();
             closeModal();
         }
